@@ -1,0 +1,58 @@
+s = serial('/dev/cu.usbserial-1410', 'BaudRate', 9600);	% Inicializamos la comunicación serial entre el microcontroldor
+fopen(s);					        % y la computadora, así como las variables que usaremos
+pause(3);
+fprintf("Connection established\n")
+theta=0:.01:2*pi;
+k=1;
+time = 0;
+data = 0;
+in=0;
+
+% Inicializamos la graficación en tiempo real y las variables necesarias para esto.
+plotGraph = plot(time,data,'-r' );  		
+title('MSD experiment','FontSize',15);
+xlabel('time (s)','FontSize',15);
+ylabel('x(t)','FontSize',15);
+min = -2;                         
+max = 2;
+axis([0 5 min max]);
+grid('on');
+
+% Inicializamos los contadores de tiempo
+count = 0;
+tic
+startTimer = toc;
+
+
+while (toc < startTimer+20) 			% Comenzamos a contar  
+  n=sin(2*pi*theta(k))+.2*sin(40*pi*theta(k));  % Creamos señal con ruido
+  fprintf(s,n);                                 % Enviamos datos al arduino
+  k=k+1;                                        % Vector Tiempo
+  count = count + 1;				% Tiempo que transcurre
+  data(count) = fscanf(s,'%f\n');		
+  time(count) = toc;                            
+  in(count) = n;                               
+  if k==length(theta)				 % Incrementamos un contador que nos va a permitir que se repita
+      k=1;					 % la señal durante todo el tiempo que deseemos graficarla.
+  end
+    
+            title(1)				% Graficamos la señal que no ha sido filtrada junto a la que si 
+            plot(time,data,'b')	                % para poder compararlas, van un poco desfasadas por el procesamiento
+            hold on			    	% que existe entre ellas.
+           
+            plot(time,in,'r');
+            axis([0 time(count) min max]);
+            pause(0.001);  
+end
+grid minor
+legend('Señal Filtrada','Señal Ruidosa','Location','southeast')
+legend('boxoff')
+
+
+endTimer = toc;					% Terminamos de contar, cerramos el puerto serial
+frequency=count/(endTimer - startTimer);	% y eliminamos las variables que se usaron para la 
+fclose(s);					% graficación.
+delete(s);
+clear s
+
+
